@@ -1,16 +1,20 @@
 import os
 from pathlib import Path
 from datetime import timedelta
-import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', '6efee7cc8453c22160fa8a4b79f732618b21e47da446ca9c87f90230c0a8b8bd08a94cd8e49ba6d8ef33b8037779753c78f12c807e22ac13a724ef77de500ffd')
 
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# Updated ALLOWED_HOSTS to include Render domain
+# ALLOWED_HOSTS - Fixed for Render
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+# Always add .onrender.com for Render deployments
+if not DEBUG:
+    ALLOWED_HOSTS.append('.onrender.com')
 
 # Application definition
 INSTALLED_APPS = [
@@ -64,15 +68,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'taskflow_api.wsgi.application'
 
-# Database
-# Use PostgreSQL in production, SQLite in development
+# Database Configuration - FIXED
+# Use PostgreSQL in production (when DATABASE_URL is set)
+# Use SQLite in development
 if os.environ.get('DATABASE_URL'):
-    # Production database (PostgreSQL)
+    # Production database (PostgreSQL on Render)
+    import dj_database_url
     DATABASES = {
         'default': dj_database_url.config(
             default=os.environ.get('DATABASE_URL'),
             conn_max_age=600,
             conn_health_checks=True,
+            ssl_require=False  # Render doesn't require SSL
         )
     }
 else:
@@ -101,7 +108,16 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# WhiteNoise configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Media files (Uploads)
 MEDIA_URL = '/media/'
@@ -135,7 +151,7 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS Settings - UPDATED FOR PRODUCTION
+# CORS Settings - FIXED
 if DEBUG:
     # Development - Allow localhost
     CORS_ALLOWED_ORIGINS = [
@@ -150,13 +166,13 @@ else:
     if cors_origins:
         CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
     else:
-        # Fallback to an empty list if not set
-        CORS_ALLOWED_ORIGINS = []
-        print("WARNING: CORS_ALLOWED_ORIGINS not set in production!")
+        # Allow all origins if not set (you can restrict this later)
+        CORS_ALLOW_ALL_ORIGINS = True
+        print("WARNING: CORS_ALLOW_ALL_ORIGINS is True. Set CORS_ALLOWED_ORIGINS in production!")
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Additional CORS settings for production
+# Additional CORS settings
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
@@ -184,31 +200,31 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
 
 # Security Settings for Production
 if not DEBUG:
-    # SSL/HTTPS Settings
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    
     # Security Headers
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
     
-    # HSTS Settings
-    SECURE_HSTS_SECONDS = 31536000  # 1 year
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    
     # Proxy Settings for Render
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    
+    # Don't redirect to HTTPS (Render handles this)
+    SECURE_SSL_REDIRECT = False
 
 # Logging Configuration
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         },
     },
     'root': {
@@ -219,6 +235,11 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
     },
