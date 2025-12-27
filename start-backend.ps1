@@ -1,0 +1,5 @@
+﻿# Activate virtual environment
+.\venv\Scripts\Activate.ps1
+
+# Run server
+python manage.py runserver
