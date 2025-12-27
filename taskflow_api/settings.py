@@ -38,7 +38,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Add WhiteNoise
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -68,9 +68,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'taskflow_api.wsgi.application'
 
-# Database Configuration - FIXED
-# Use PostgreSQL in production (when DATABASE_URL is set)
-# Use SQLite in development
+# Database Configuration
 if os.environ.get('DATABASE_URL'):
     # Production database (PostgreSQL on Render)
     import dj_database_url
@@ -79,7 +77,7 @@ if os.environ.get('DATABASE_URL'):
             default=os.environ.get('DATABASE_URL'),
             conn_max_age=600,
             conn_health_checks=True,
-            ssl_require=False  # Render doesn't require SSL
+            ssl_require=False
         )
     }
 else:
@@ -105,7 +103,7 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
@@ -119,13 +117,13 @@ STORAGES = {
     },
 }
 
-# Media files (Uploads)
+# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# REST Framework Settings
+# REST Framework Settings - UPDATED TO DISABLE PAGINATION
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -133,8 +131,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
+    # DISABLE PAGINATION - Return raw arrays instead of paginated responses
+    'DEFAULT_PAGINATION_CLASS': None,
+    # Alternative: Keep pagination but increase page size
+    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    # 'PAGE_SIZE': 100,
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
@@ -151,7 +152,7 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS Settings - FIXED
+# CORS Settings
 if DEBUG:
     # Development - Allow localhost
     CORS_ALLOWED_ORIGINS = [
@@ -166,7 +167,7 @@ else:
     if cors_origins:
         CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
     else:
-        # Allow all origins if not set (you can restrict this later)
+        # Allow all origins if not set
         CORS_ALLOW_ALL_ORIGINS = True
         print("WARNING: CORS_ALLOW_ALL_ORIGINS is True. Set CORS_ALLOWED_ORIGINS in production!")
 
