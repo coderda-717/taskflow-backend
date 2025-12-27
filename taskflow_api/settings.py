@@ -5,10 +5,11 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production-a1b2c3d4e5f6g7h8i9j0')
+SECRET_KEY = os.environ.get('SECRET_KEY', '6efee7cc8453c22160fa8a4b79f732618b21e47da446ca9c87f90230c0a8b8bd08a94cd8e49ba6d8ef33b8037779753c78f12c807e22ac13a724ef77de500ffd')
 
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
+# Updated ALLOWED_HOSTS to include Render domain
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Application definition
@@ -134,8 +135,9 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS Settings
+# CORS Settings - UPDATED FOR PRODUCTION
 if DEBUG:
+    # Development - Allow localhost
     CORS_ALLOWED_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -143,10 +145,38 @@ if DEBUG:
         "http://127.0.0.1:3000",
     ]
 else:
-    # Add your production frontend URL
-    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
+    # Production - Get from environment variable
+    cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+    if cors_origins:
+        CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
+    else:
+        # Fallback to an empty list if not set
+        CORS_ALLOWED_ORIGINS = []
+        print("WARNING: CORS_ALLOWED_ORIGINS not set in production!")
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Additional CORS settings for production
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
@@ -154,12 +184,42 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
 
 # Security Settings for Production
 if not DEBUG:
+    # SSL/HTTPS Settings
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    
+    # Security Headers
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
-    SECURE_HSTS_SECONDS = 31536000
+    
+    # HSTS Settings
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    
+    # Proxy Settings for Render
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+    },
+}

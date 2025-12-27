@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: taskflow-api
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn taskflow_api.wsgi:application"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
