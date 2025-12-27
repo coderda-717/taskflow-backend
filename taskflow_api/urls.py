@@ -6,7 +6,7 @@ from django.http import HttpResponse
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from tasks.views import TaskViewSet, TaskCategoryViewSet
-from users.views import UserRegistrationView, UserProfileView
+from users.views import UserRegistrationView, UserProfileView, UserProfileUpdateView
 
 # Root view with HTML
 def api_root(request):
@@ -193,6 +193,13 @@ def api_root(request):
                         <span class="method">GET</span>
                     </div>
                 </div>
+                <div class="endpoint">
+                    <span class="endpoint-name">Update Profile</span>
+                    <div>
+                        <span class="endpoint-path">/api/auth/profile/update/</span>
+                        <span class="method">PATCH</span>
+                    </div>
+                </div>
             </div>
 
             <div class="section">
@@ -233,6 +240,7 @@ urlpatterns = [
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/profile/', UserProfileView.as_view(), name='user_profile'),
+    path('api/auth/profile/update/', UserProfileUpdateView.as_view(), name='user_profile_update'),
 ]
 
 # Serve media files in development
